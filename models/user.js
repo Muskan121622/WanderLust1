@@ -85,23 +85,7 @@ const userSchema = new Schema({
             default: "",
         }
     },
-    wishlist: [
-        {
-            listing: {
-                type: Schema.Types.ObjectId,
-                ref: "Listing",
-            },
-            addedAt: {
-                type: Date,
-                default: Date.now,
-            },
-            notes: {
-                type: String,
-                maxlength: 200,
-                default: "",
-            }
-        }
-    ],
+
     travelStats: {
         countriesVisited: {
             type: Number,

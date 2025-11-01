@@ -5,8 +5,9 @@
         background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2073&q=80') center/cover no-repeat fixed;
         min-height: 100vh;
         position: relative;
+        color: var(--text-primary);
     }
-    
+
     body::before {
         content: '';
         position: fixed;
@@ -14,72 +15,75 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--background-glass);
         z-index: -1;
     }
-    
+
     .comparison-table {
-        background: rgba(255, 255, 255, 0.95);
+        background: var(--background-overlay);
         backdrop-filter: blur(10px);
         border-radius: 20px;
         overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-lg);
         margin-bottom: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid var(--glass-border);
     }
-    
+
     .comparison-header {
         background: linear-gradient(135deg, #fe424d 0%, #ff6b6b 100%);
-        color: white;
+        color: var(--text-inverse);
         padding: 3rem 2rem;
         text-align: center;
     }
-    
+
     .comparison-row {
         display: flex;
-        border-bottom: 1px solid rgba(0,0,0,0.1);
+        border-bottom: 1px solid var(--border-primary);
         transition: background-color 0.3s ease;
     }
-    
+
     .comparison-row:hover {
         background-color: rgba(254, 66, 77, 0.05);
     }
-    
+
     .comparison-label {
         flex: 0 0 200px;
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        background: var(--background-tertiary);
         padding: 1.5rem;
         font-weight: 700;
-        color: #2c3e50;
-        border-right: 1px solid rgba(0,0,0,0.1);
+        color: var(--text-primary);
+        border-right: 1px solid var(--border-primary);
         display: flex;
         align-items: center;
     }
-    
+
     .comparison-value {
         flex: 1;
         padding: 1.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
+        color: var(--text-primary);
     }
-    
+
     .comparison-card {
         border: none;
         border-radius: 15px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-md);
         transition: transform 0.3s ease;
         height: 100%;
         width: 100%;
         max-width: 300px;
         overflow: hidden;
+        background: var(--card-bg);
+        color: var(--text-primary);
     }
-    
+
     .comparison-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-xl);
     }
-    
+
     .amenity-badge {
         background: linear-gradient(135deg, #e3f2fd, #bbdefb);
         color: #1976d2;
@@ -91,42 +95,71 @@
         display: inline-block;
         border: 1px solid rgba(25, 118, 210, 0.2);
     }
-    
+
     .rating-stars {
         color: #ffc107;
         font-size: 1.3rem;
         margin-bottom: 0.5rem;
         text-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
     }
-    
+
     .price-breakdown {
         text-align: center;
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        background: var(--background-tertiary);
         padding: 1rem;
         border-radius: 10px;
+        color: var(--text-primary);
     }
-    
+
     .base-price {
         font-size: 1.2rem;
         font-weight: 700;
         color: #fe424d;
     }
-    
+
     .tax-price {
         font-size: 0.9rem;
-        color: #6c757d;
+        color: var(--text-muted);
     }
-    
+
     .total-price {
         font-size: 1.3rem;
         font-weight: 800;
         color: #28a745;
         margin-top: 0.5rem;
     }
+
+    .description-text {
+        color: var(--text-secondary);
+    }
+
+    .location-info {
+        color: var(--text-primary);
+    }
+
+    .location-info i {
+        color: var(--primary-500);
+    }
+
     .search-btn {
-    padding-top: 0.5rem;  
-    padding-bottom: 0.5rem;
-}
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    /* Dark mode specific overrides */
+    [data-theme="dark"] .comparison-header {
+        background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    }
+
+    [data-theme="dark"] .comparison-row:hover {
+        background-color: rgba(254, 66, 77, 0.1);
+    }
+
+    [data-theme="dark"] .amenity-badge {
+        background: linear-gradient(135deg, rgba(227, 242, 253, 0.1), rgba(187, 222, 251, 0.1));
+        color: var(--primary-300);
+        border-color: rgba(25, 118, 210, 0.3);
+    }
 
 </style>
 <body>

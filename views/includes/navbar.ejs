@@ -27,18 +27,19 @@
   .navbar-brand {
     white-space: nowrap;
     margin-right: 0.5rem !important;
+    font-size: 1.2rem;
   }
 
   .navbar-nav .nav-link {
     padding: 0.5rem 0.5rem !important;
-    font-size: 0.9rem;
+    font-size: 1.2rem;
   }
 
   /* Search Bar */
   .navbar-search-form {
     position: relative;
     flex-grow: 1;
-    max-width: 500px;
+    max-width: 600px;
     min-width: 200px;
   }
 
@@ -48,18 +49,12 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
-  .navbar-search-form .input-group-text {
-    background-color: white;
-    border: 1px solid #dee2e6;
-    border-right: none;
-    padding-left: 1rem;
-  }
-
   .navbar-search-form .form-control {
     border: 1px solid #dee2e6;
-    border-left: none;
-    border-right: none;
+    border-radius: 50px 0 0 50px;
     padding: 0.5rem 0.75rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
   }
 
   .navbar-search-form .form-control:focus {
@@ -247,7 +242,9 @@
 
 <nav class="navbar navbar-expand-lg bg-body-light border-bottom sticky-top" role="navigation"
   aria-label="Main navigation">
-  <div class="container-fluid px-3 px-lg-4">
+  <div class="container-fluid px-6 px-lg-5">
+
+
     <!-- Brand -->
     <a class="navbar-brand d-flex align-items-center" href="/listings" aria-label="WanderLust - Go to home page">
       <i class="fa-regular fa-compass me-2" aria-hidden="true"></i>
@@ -329,9 +326,6 @@
       <form role="search" method="GET" action="/listings" class="navbar-search-form mx-lg-3"
         aria-label="Search destinations">
         <div class="input-group">
-          <span class="input-group-text">
-            <i class="fa-solid fa-magnifying-glass text-muted" aria-hidden="true"></i>
-          </span>
           <input class="form-control" type="search" name="search" id="searchInput"
             placeholder="<%= __('search_destinations') %>"
             value="<%= typeof searchQuery !== 'undefined' && searchQuery ? searchQuery : '' %>" autocomplete="off"

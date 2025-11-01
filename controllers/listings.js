@@ -102,17 +102,29 @@ const geocodeLocation = async (location) => {
 // ===========================
 
 /**
- * Display all listings with optional category and search filters
+ * Display all listings with optional category, search, and advanced filters
  */
 module.exports.index = async (req, res, next) => {
   try {
-    const { category, search, q } = req.query;
+    const {
+      category,
+      search,
+      q,
+      sortBy,
+      country,
+      minPrice,
+      maxPrice,
+      minRating
+    } = req.query;
+
     const filter = {};
     let searchQuery = null;
+    let activeFilters = {};
 
     // Category filtering
     if (category) {
       filter.category = category;
+      activeFilters.category = category;
     }
 
     // Search functionality - handle both 'search' and 'q' parameters
@@ -126,16 +138,94 @@ module.exports.index = async (req, res, next) => {
         { location: searchRegex },
         { country: searchRegex }
       ];
+      activeFilters.search = searchQuery;
     }
 
-    // Fetch listings with populated reviews
-    const allListings = await Listing.find(filter)
-      .populate({ path: 'reviews', populate: { path: 'author' } })
-      .lean();
+    // Advanced filters
+    if (country) {
+      filter.country = country;
+      activeFilters.country = country;
+    }
+
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) {
+        filter.price.$gte = parseInt(minPrice);
+        activeFilters.minPrice = minPrice;
+      }
+      if (maxPrice) {
+        filter.price.$lte = parseInt(maxPrice);
+        activeFilters.maxPrice = maxPrice;
+      }
+    }
+
+    // Build aggregation pipeline for advanced filtering
+    const pipeline = [];
+
+    // Match stage
+    if (Object.keys(filter).length > 0) {
+      pipeline.push({ $match: filter });
+    }
+
+    // Lookup reviews for rating calculation
+    pipeline.push({
+      $lookup: {
+        from: 'reviews',
+        localField: '_id',
+        foreignField: 'listing',
+        as: 'reviews'
+      }
+    });
+
+    // Add computed fields
+    pipeline.push({
+      $addFields: {
+        reviewCount: { $size: '$reviews' },
+        avgRating: {
+          $cond: {
+            if: { $gt: [{ $size: '$reviews' }, 0] },
+            then: { $avg: '$reviews.rating' },
+            else: 0
+          }
+        },
+        popularity: {
+          $add: [
+            { $size: '$reviews' },
+            { $cond: { if: { $isArray: '$likes' }, then: { $size: '$likes' }, else: 0 } }
+          ]
+        }
+      }
+    });
+
+    // Filter by minimum rating
+    if (minRating) {
+      pipeline.push({
+        $match: { avgRating: { $gte: parseFloat(minRating) } }
+      });
+      activeFilters.minRating = minRating;
+    }
+
+    // Sorting
+    const sortStage = {
+      'price-low': { price: 1 },
+      'price-high': { price: -1 },
+      'rating': { avgRating: -1, reviewCount: -1 },
+      'popularity': { popularity: -1, avgRating: -1 },
+      'newest': { createdAt: -1 }
+    }[sortBy] || { createdAt: -1 };
+
+    if (sortBy) {
+      activeFilters.sortBy = sortBy;
+    }
+
+    pipeline.push({ $sort: sortStage });
+
+    // Execute aggregation
+    let allListings = await Listing.aggregate(pipeline);
 
     // Add badges to each listing
     allListings.forEach(listing => {
-      addBadgesToListing(listing);
+      addBadgesToListing(listing, listing.avgRating);
     });
 
     // Log search queries asynchronously (don't wait)
@@ -157,7 +247,9 @@ module.exports.index = async (req, res, next) => {
       searchQuery,
       totalResults: allListings.length,
       hasSearch: !!searchQuery,
-      noResults: searchQuery && allListings.length === 0
+      noResults: searchQuery && allListings.length === 0,
+      activeFilters,
+      filterParams: { sortBy, country, minPrice, maxPrice, minRating }
     });
   } catch (error) {
     console.error('Error in index controller:', error);
@@ -480,7 +572,8 @@ module.exports.showListing = async (req, res, next) => {
       weatherData,
       forecast,
       bestTimeToVisit,
-      phrases
+      phrases,
+      mapToken: process.env.MAP_TOKEN
     });
   } catch (error) {
     console.error('❌ Error in showListing:', error);
@@ -728,32 +821,50 @@ module.exports.likeListing = async (req, res, next) => {
     const { id } = req.params;
     const userId = req.user._id;
 
-    // Use atomic operations for better performance
-    const listing = await Listing.findById(id);
-    const user = await User.findById(userId);
+    console.log(`🔍 Attempting to like listing ${id} for user ${userId}`);
 
-    if (!listing || !user) {
-      req.flash("error", "Listing or user not found!");
+    // Validate listing exists
+    const listing = await Listing.findById(id);
+    if (!listing) {
+      console.error(`❌ Listing ${id} not found`);
+      req.flash("error", "Listing not found!");
+      return res.redirect("/listings");
+    }
+
+    // Validate user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error(`❌ User ${userId} not found`);
+      req.flash("error", "User not found!");
       return res.redirect("/listings");
     }
 
     // Check if already liked
-    if (listing.likes.includes(userId)) {
+    if (listing.likes && listing.likes.includes(userId)) {
+      console.log(`ℹ️ Listing ${id} already liked by user ${userId}`);
       req.flash("info", "You already liked this listing!");
       return res.redirect(`/listings/${id}`);
     }
 
     // Add to both arrays atomically
+    console.log(`➕ Adding like: listing ${id} to user ${userId}`);
     await Promise.all([
-      Listing.findByIdAndUpdate(id, { $addToSet: { likes: userId } }),
-      User.findByIdAndUpdate(userId, { $addToSet: { likes: id } })
+      Listing.findByIdAndUpdate(id, { $addToSet: { likes: userId } }, { new: true }),
+      User.findByIdAndUpdate(userId, { $addToSet: { likes: id } }, { new: true })
     ]);
 
+    // Log activity
+    if (user && user.logActivity) {
+      await user.logActivity('like_listing', 'Liked a listing', id);
+    }
+
+    console.log(`✅ Successfully liked listing ${id} for user ${userId}`);
     req.flash("success", "Added to your liked listings!");
     res.redirect(`/listings/${id}`);
   } catch (error) {
     console.error("❌ Error liking listing:", error);
-    next(error);
+    req.flash("error", "Failed to like listing. Please try again.");
+    res.redirect(`/listings/${req.params.id}`);
   }
 };
 
@@ -765,16 +876,49 @@ module.exports.unlikeListing = async (req, res, next) => {
     const { id } = req.params;
     const userId = req.user._id;
 
+    console.log(`🔍 Attempting to unlike listing ${id} for user ${userId}`);
+
+    // Validate listing exists
+    const listing = await Listing.findById(id);
+    if (!listing) {
+      console.error(`❌ Listing ${id} not found`);
+      req.flash("error", "Listing not found!");
+      return res.redirect("/listings");
+    }
+
+    // Validate user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error(`❌ User ${userId} not found`);
+      req.flash("error", "User not found!");
+      return res.redirect("/listings");
+    }
+
+    // Check if not liked
+    if (!listing.likes || !listing.likes.includes(userId)) {
+      console.log(`ℹ️ Listing ${id} not liked by user ${userId}`);
+      req.flash("info", "You haven't liked this listing!");
+      return res.redirect(`/listings/${id}`);
+    }
+
     // Remove from both arrays atomically
+    console.log(`➖ Removing like: listing ${id} from user ${userId}`);
     await Promise.all([
-      Listing.findByIdAndUpdate(id, { $pull: { likes: userId } }),
-      User.findByIdAndUpdate(userId, { $pull: { likes: id } })
+      Listing.findByIdAndUpdate(id, { $pull: { likes: userId } }, { new: true }),
+      User.findByIdAndUpdate(userId, { $pull: { likes: id } }, { new: true })
     ]);
 
+    // Log activity
+    if (user && user.logActivity) {
+      await user.logActivity('unlike_listing', 'Unliked a listing', id);
+    }
+
+    console.log(`✅ Successfully unliked listing ${id} for user ${userId}`);
     req.flash("success", "Removed from your liked listings!");
     res.redirect(`/listings/${id}`);
   } catch (error) {
     console.error("❌ Error unliking listing:", error);
-    next(error);
+    req.flash("error", "Failed to unlike listing. Please try again.");
+    res.redirect(`/listings/${req.params.id}`);
   }
 };

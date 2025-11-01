@@ -90,7 +90,7 @@ router.post("/api/estimate", async (req, res) => {
         const activityData = await tripPlannerService.getActivityPrices(destination, days, travelers, [req.body.tripType || 'leisure']);
 
         // Seasonal pricing multiplier
-        const seasonalMultiplier = getSeasonalMultiplier(destination, startMonth);
+        const seasonalMultiplier = tripPlannerService.getSeasonalMultiplier(startMonth);
 
         // Enhanced cost calculation
         const baseCosts = {
@@ -105,9 +105,9 @@ router.post("/api/estimate", async (req, res) => {
         const adjustedCosts = {
             flights: Math.round((flightData.price || costs.flight) * travelers * seasonalMultiplier),
             hotels: Math.round((hotelData.pricePerNight || costs.hotel) * travelers * days * seasonalMultiplier),
-            food: Math.round(costs.food * travelers * days * getDestinationMultiplier(destination, 'food')),
+            food: Math.round(costs.food * travelers * days * tripPlannerService.getDestinationMultiplier(destination)),
             activities: Math.round((activityData.averagePrice || costs.activities) * travelers * days),
-            transport: Math.round(costs.transport * travelers * days * getDestinationMultiplier(destination, 'transport')),
+            transport: Math.round(costs.transport * travelers * days * tripPlannerService.getDestinationMultiplier(destination)),
             insurance: Math.round(costs.insurance * travelers * days)
         };
 
@@ -115,7 +115,7 @@ router.post("/api/estimate", async (req, res) => {
 
         // Add recommendations and tips using service
         const recommendations = tripPlannerService.generateRecommendations(destination, budgetType, startMonth, days, travelers);
-        const savingTips = tripPlannerService.generateSavingTips(budgetType, days, seasonalMultiplier, destination);
+        const savingTips = tripPlannerService.generateSavingTips(budgetType, days, seasonalMultiplier);
 
         // Prepare estimation in USD, then convert to requested currency if necessary
         const baseCurrency = 'USD';
@@ -193,46 +193,7 @@ router.post('/api/echo', (req, res) => {
     }
 });
 
-// Helper functions for seasonal and destination pricing
-function getSeasonalMultiplier(destination, month) {
-    const peakSeasons = {
-        'Europe': [5, 6, 7, 8], // Jun-Sep
-        'Asia': [10, 11, 0, 1, 2], // Nov-Mar
-        'Americas': [5, 6, 7, 8], // Jun-Sep
-        'Default': [5, 6, 7, 11] // Jun-Aug, Dec
-    };
 
-    const region = getRegion(destination);
-    const peak = peakSeasons[region] || peakSeasons['Default'];
-
-    return peak.includes(month) ? 1.3 : 0.9;
-}
-
-function getDestinationMultiplier(destination, category) {
-    const multipliers = {
-        'Tokyo': { food: 1.4, transport: 1.2 },
-        'Paris': { food: 1.3, transport: 1.1 },
-        'London': { food: 1.2, transport: 1.3 },
-        'Dubai': { food: 1.1, transport: 0.8 },
-        'Mumbai': { food: 0.6, transport: 0.5 },
-        'Delhi': { food: 0.5, transport: 0.4 }
-    };
-
-    return multipliers[destination]?.[category] || 1.0;
-}
-
-function getRegion(destination) {
-    const regions = {
-        'Europe': ['Paris', 'London', 'Rome', 'Barcelona', 'Amsterdam'],
-        'Asia': ['Tokyo', 'Mumbai', 'Delhi', 'Bangkok', 'Singapore'],
-        'Americas': ['New York', 'Los Angeles', 'Toronto', 'Mexico City']
-    };
-
-    for (const [region, cities] of Object.entries(regions)) {
-        if (cities.includes(destination)) return region;
-    }
-    return 'Default';
-}
 
 // Save trip plan with enhanced data
 router.post("/save", isLoggedIn, async (req, res) => {

@@ -365,7 +365,48 @@
     </div>
 
     <!-- Active Filters Display -->
-    <div class="active-filters mb-3" id="activeFilters" style="display: none;"></div>
+    <div class="active-filters mb-3" id="activeFilters">
+        <% if (activeFilters && Object.keys(activeFilters).length > 0) { %>
+            <% Object.entries(activeFilters).forEach(([key, value]) => { %>
+                <% if (key === 'search') { %>
+                    <span class="filter-tag">
+                        Search: "<%= value %>"
+                        <a href="/listings" class="remove-filter" onclick="clearSearch()">&times;</a>
+                    </span>
+                <% } else if (key === 'category') { %>
+                    <span class="filter-tag">
+                        Category: <%= value %>
+                        <a href="/listings" class="remove-filter">&times;</a>
+                    </span>
+                <% } else if (key === 'country') { %>
+                    <span class="filter-tag">
+                        Country: <%= value %>
+                        <a href="/listings" class="remove-filter" onclick="clearCountryFilter()">&times;</a>
+                    </span>
+                <% } else if (key === 'minPrice') { %>
+                    <span class="filter-tag">
+                        Min Price: ₹<%= value %>
+                        <a href="/listings" class="remove-filter" onclick="clearMinPrice()">&times;</a>
+                    </span>
+                <% } else if (key === 'maxPrice') { %>
+                    <span class="filter-tag">
+                        Max Price: ₹<%= value %>
+                        <a href="/listings" class="remove-filter" onclick="clearMaxPrice()">&times;</a>
+                    </span>
+                <% } else if (key === 'minRating') { %>
+                    <span class="filter-tag">
+                        Min Rating: <%= value %>+
+                        <a href="/listings" class="remove-filter" onclick="clearMinRating()">&times;</a>
+                    </span>
+                <% } else if (key === 'sortBy') { %>
+                    <span class="filter-tag">
+                        Sort: <%= value.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) %>
+                        <a href="/listings" class="remove-filter" onclick="clearSortBy()">&times;</a>
+                    </span>
+                <% } %>
+            <% }); %>
+        <% } %>
+    </div>
 
     <!-- Advanced Filters Panel -->
     <div class="advanced-filters-container mb-4" style="display: none;">
@@ -672,5 +713,43 @@
                                             }
                                             window.location.href = `/listings/compare?ids=${selectedListings.join(',')}`;
                                         });
+
+                                        // Filter removal functions
+                                        function clearSearch() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('search');
+                                            url.searchParams.delete('q');
+                                            window.location.href = url.toString();
+                                        }
+
+                                        function clearCountryFilter() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('country');
+                                            window.location.href = url.toString();
+                                        }
+
+                                        function clearMinPrice() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('minPrice');
+                                            window.location.href = url.toString();
+                                        }
+
+                                        function clearMaxPrice() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('maxPrice');
+                                            window.location.href = url.toString();
+                                        }
+
+                                        function clearMinRating() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('minRating');
+                                            window.location.href = url.toString();
+                                        }
+
+                                        function clearSortBy() {
+                                            const url = new URL(window.location);
+                                            url.searchParams.delete('sortBy');
+                                            window.location.href = url.toString();
+                                        }
                                     });
                                 </script>

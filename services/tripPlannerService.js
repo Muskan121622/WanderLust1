@@ -100,32 +100,66 @@ class TripPlannerService {
 
     // Mock API implementations (replace with real API calls in production)
     
+   
+
+
     async mockFlightAPI(origin, destination, departDate, returnDate, passengers) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const routes = {
-            'New York': { 'Paris': 450, 'Tokyo': 800, 'London': 400, 'Dubai': 600, 'Mumbai': 900 },
-            'London': { 'Paris': 150, 'Tokyo': 700, 'New York': 400, 'Dubai': 350, 'Mumbai': 500 },
-            'Mumbai': { 'Dubai': 200, 'London': 500, 'Paris': 550, 'Tokyo': 400, 'New York': 900 },
-            'Delhi': { 'Dubai': 180, 'London': 480, 'Paris': 520, 'Tokyo': 380, 'New York': 850 }
-        };
-        
-        const basePrice = routes[origin]?.[destination] || 500;
-        const variation = Math.random() * 0.4 - 0.2; // ±20% variation
-        const seasonalMultiplier = this.getSeasonalMultiplier(new Date(departDate).getMonth());
-        
-        return {
-            price: Math.round(basePrice * (1 + variation) * seasonalMultiplier),
-            airline: ['Emirates', 'British Airways', 'Lufthansa', 'Air India', 'Qatar Airways'][Math.floor(Math.random() * 5)],
-            duration: `${Math.floor(Math.random() * 10) + 5}h ${Math.floor(Math.random() * 60)}m`,
-            stops: Math.random() > 0.6 ? 0 : Math.floor(Math.random() * 2) + 1,
-            availability: Math.random() > 0.2,
-            bookingClass: ['Economy', 'Premium Economy', 'Business'][Math.floor(Math.random() * 3)],
-            baggage: '23kg included',
-            refundable: Math.random() > 0.5
-        };
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Normalize city names to lowercase for consistent lookups
+    const lowerOrigin = origin.trim().toLowerCase();
+    const lowerDestination = destination.trim().toLowerCase();
+
+    // Expanded routes with Indian cities and realistic pricing - using lowercase keys
+    const routes = {
+        // International routes from major cities
+        'new york': { 'paris': 450, 'tokyo': 800, 'london': 400, 'dubai': 600, 'mumbai': 900, 'delhi': 850 },
+        'london': { 'paris': 150, 'tokyo': 700, 'new york': 400, 'dubai': 350, 'mumbai': 500, 'delhi': 480 },
+        'mumbai': { 'dubai': 200, 'london': 500, 'paris': 550, 'tokyo': 400, 'new york': 900, 'delhi': 80, 'kolkata': 120, 'goa': 150, 'bangalore': 100, 'chennai': 110, 'hyderabad': 90 },
+        'delhi': { 'dubai': 180, 'london': 480, 'paris': 520, 'tokyo': 380, 'new york': 850, 'mumbai': 80, 'kolkata': 100, 'goa': 130, 'bangalore': 120, 'chennai': 130, 'hyderabad': 70 },
+        'kolkata': { 'mumbai': 120, 'delhi': 100, 'goa': 180, 'bangalore': 140, 'chennai': 150, 'hyderabad': 120, 'dubai': 250, 'singapore': 300, 'imphal': 100 },
+        'goa': { 'mumbai': 150, 'delhi': 130, 'kolkata': 180, 'bangalore': 160, 'chennai': 170, 'hyderabad': 140 },
+        'bangalore': { 'mumbai': 100, 'delhi': 120, 'kolkata': 140, 'goa': 160, 'chennai': 50, 'hyderabad': 60, 'dubai': 220 },
+        'chennai': { 'mumbai': 110, 'delhi': 130, 'kolkata': 150, 'goa': 170, 'bangalore': 50, 'hyderabad': 80 },
+        'hyderabad': { 'mumbai': 90, 'delhi': 70, 'kolkata': 120, 'goa': 140, 'bangalore': 60, 'chennai': 80 },
+        'paris': { 'london': 150, 'new york': 450, 'tokyo': 650, 'dubai': 400 },
+        'tokyo': { 'new york': 800, 'london': 700, 'paris': 650, 'dubai': 550 },
+        'dubai': { 'london': 350, 'paris': 400, 'new york': 600, 'tokyo': 550, 'mumbai': 200, 'delhi': 180 }
+    };
+
+    const basePrice = routes[lowerOrigin]?.[lowerDestination] || 500;
+    const variation = Math.random() * 0.5 - 0.25; // ±25% variation
+    const seasonalMultiplier = this.getSeasonalMultiplier(new Date(departDate).getMonth());
+
+    // Determine if route is domestic (both cities in India)
+    const indianCities = ['Mumbai', 'Delhi', 'Kolkata', 'Goa', 'Bangalore', 'Chennai', 'Hyderabad', 'Ahmedabad', 'Jaipur', 'Pune', 'Imphal', 'Guwahati', 'Shillong', 'Agartala', 'Aizawl', 'Dibrugarh', 'Silchar'];
+    const isDomestic = indianCities.some(city => city.toLowerCase() === lowerOrigin) &&
+                      indianCities.some(city => city.toLowerCase() === lowerDestination);
+
+    // Select appropriate airline based on route type
+    let airlines;
+    if (isDomestic) {
+        airlines = ['Indigo', 'Air India', 'SpiceJet', 'Vistara', 'GoAir'];
+    } else {
+        airlines = ['Emirates', 'British Airways', 'Lufthansa', 'Air India', 'Qatar Airways', 'Singapore Airlines', 'Thai Airways'];
     }
+
+    // Get realistic duration and stops based on route
+    const flightDetails = this.getFlightDetails(lowerOrigin, lowerDestination, isDomestic);
+
+    return {
+        price: Math.round(basePrice * (1 + variation) * seasonalMultiplier),
+        airline: airlines[Math.floor(Math.random() * airlines.length)],
+        duration: flightDetails.duration,
+        stops: flightDetails.stops,
+        availability: Math.random() > 0.2,
+        bookingClass: ['Economy', 'Premium Economy', 'Business'][Math.floor(Math.random() * 3)],
+        baggage: '20kg included',
+        refundable: Math.random() > 0.5
+    };
+}
+
 
     async mockHotelAPI(destination, checkIn, checkOut, guests, roomType) {
         await new Promise(resolve => setTimeout(resolve, 600));
@@ -167,6 +201,10 @@ class TripPlannerService {
             location: 'City Center'
         };
     }
+
+
+
+    
 
     async mockActivityAPI(destination, duration, travelers, interests) {
         await new Promise(resolve => setTimeout(resolve, 400));
@@ -210,8 +248,92 @@ class TripPlannerService {
             'Bangkok': 0.7,
             'Singapore': 1.1
         };
-        
+
         return multipliers[destination] || 1.0;
+    }
+
+    /**
+     * Get realistic flight duration and stops based on route
+     */
+    getFlightDetails(origin, destination, isDomestic) {
+        // Domestic Indian flight durations (in hours) - using lowercase keys
+        const domesticDurations = {
+            'mumbai-delhi': 2.5, 'delhi-mumbai': 2.5,
+            'mumbai-kolkata': 3.0, 'kolkata-mumbai': 3.0,
+            'delhi-kolkata': 2.0, 'kolkata-delhi': 2.0,
+            'mumbai-goa': 1.5, 'goa-mumbai': 1.5,
+            'delhi-goa': 2.5, 'goa-delhi': 2.5,
+            'kolkata-goa': 2.5, 'goa-kolkata': 2.5,
+            'kolkata-imphal': 1.5, 'imphal-kolkata': 1.5,
+            'mumbai-bangalore': 2.0, 'bangalore-mumbai': 2.0,
+            'delhi-bangalore': 2.5, 'bangalore-delhi': 2.5,
+            'mumbai-chennai': 2.5, 'chennai-mumbai': 2.5,
+            'delhi-chennai': 2.5, 'chennai-delhi': 2.5,
+            'bangalore-chennai': 1.0, 'chennai-bangalore': 1.0,
+            'mumbai-hyderabad': 1.5, 'hyderabad-mumbai': 1.5,
+            'delhi-hyderabad': 2.0, 'hyderabad-delhi': 2.0,
+            'bangalore-hyderabad': 1.0, 'hyderabad-bangalore': 1.0,
+            'chennai-hyderabad': 1.5, 'hyderabad-chennai': 1.5
+        };
+
+        // International flight durations (in hours) - using lowercase keys
+        const internationalDurations = {
+            'mumbai-dubai': 3.5, 'dubai-mumbai': 3.5,
+            'delhi-dubai': 3.5, 'dubai-delhi': 3.5,
+            'mumbai-london': 9.0, 'london-mumbai': 9.0,
+            'delhi-london': 8.5, 'london-delhi': 8.5,
+            'mumbai-paris': 9.5, 'paris-mumbai': 9.5,
+            'delhi-paris': 9.0, 'paris-delhi': 9.0,
+            'mumbai-new york': 15.0, 'new york-mumbai': 15.0,
+            'delhi-new york': 14.5, 'new york-delhi': 14.5,
+            'london-new york': 8.0, 'new york-london': 8.0,
+            'paris-new york': 8.5, 'new york-paris': 8.5,
+            'london-paris': 1.5, 'paris-london': 1.5,
+            'dubai-london': 7.0, 'london-dubai': 7.0,
+            'dubai-paris': 7.5, 'paris-dubai': 7.5
+        };
+
+        // Create case-insensitive route key
+        const routeKey = `${origin.toLowerCase()}-${destination.toLowerCase()}`;
+        const reverseRouteKey = `${destination.toLowerCase()}-${origin.toLowerCase()}`;
+
+        let duration;
+
+        if (isDomestic) {
+            // Check both directions for domestic routes
+            duration = domesticDurations[routeKey] || domesticDurations[reverseRouteKey] || 2.0; // Default 2 hours for domestic
+        } else {
+            // Check both directions for international routes
+            duration = internationalDurations[routeKey] || internationalDurations[reverseRouteKey] || 8.0; // Default 8 hours for international
+        }
+
+        // Add some variation (±30 minutes)
+        const variation = (Math.random() - 0.5) * 0.5;
+        duration += variation;
+
+        // Determine stops based on duration and route type
+        let stops;
+        if (isDomestic) {
+            stops = Math.random() > 0.8 ? 1 : 0; // 80% direct domestic flights
+        } else {
+            if (duration < 5) {
+                stops = Math.random() > 0.7 ? 0 : 1; // Short international might have stops
+            } else if (duration < 10) {
+                stops = Math.random() > 0.5 ? 1 : 0; // Medium haul often 1 stop
+            } else {
+                stops = Math.random() > 0.3 ? 1 : 2; // Long haul often 1-2 stops
+            }
+        }
+
+        // Format duration
+        const hours = Math.floor(duration);
+        const minutes = Math.round((duration - hours) * 60);
+        const durationStr = `${hours}h ${minutes}m`;
+
+        return {
+            duration: durationStr,
+            stops: stops
+        };
     }
 
     /**

@@ -103,11 +103,7 @@ const Listing = require("../models/listing");
 
 module.exports.renderProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id)
-            .populate({
-                path: 'wishlist.listing',
-                select: 'title price location image'
-            });
+        const user = await User.findById(req.user._id);
 
         const [listingCount, reviewCount, wishlistCount] = await Promise.all([
             Listing.countDocuments({ owner: req.user._id }),
@@ -117,17 +113,17 @@ module.exports.renderProfile = async (req, res) => {
 
         // Update user stats
         await BadgeService.updateUserStats(req.user._id);
-        
+
         // Check for new badges
         const newBadges = await BadgeService.checkAndAwardBadges(req.user._id);
-        
+
         // Get updated user with new badges
         const updatedUser = await User.findById(req.user._id);
 
         // Get recent activity (last 10 activities)
         const recentActivity = updatedUser.activityLog.slice(0, 10);
 
-        res.render("users/profile.ejs", { 
+        res.render("users/profile.ejs", {
             listingCount,
             reviewCount,
             wishlistCount,
@@ -144,20 +140,30 @@ module.exports.renderProfile = async (req, res) => {
 };
 
 module.exports.showLikedListings = async (req, res) => {
-    const user = await User.findById(req.user._id).populate("likes");
+    try {
+        const user = await User.findById(req.user._id).populate({
+            path: "likes",
+            select: "title price location image category country createdAt"
+        });
 
-    if (!user) {
-        req.flash("error", "User not found.");
-        return res.redirect("/listings");
+        if (!user) {
+            req.flash("error", "User not found.");
+            return res.redirect("/listings");
+        }
+
+        console.log(`🔍 Found ${user.likes.length} liked listings for user ${user.username}`);
+        console.log("Liked listings being sent to the page:", user.likes.map(l => ({ id: l._id, title: l.title })));
+
+        res.render("users/liked.ejs", {
+            name: user.username,
+            likedListings: user.likes,
+            totalLiked: user.likes.length
+        });
+    } catch (error) {
+        console.error("❌ Error loading liked listings:", error);
+        req.flash("error", "Error loading liked listings. Please try again.");
+        res.redirect("/profile");
     }
-
-
-    console.log("Liked listings being sent to the page:", user.likes);
-    
-    res.render("users/liked.ejs", { 
-        name: user.username,
-        likedListings: user.likes 
-    });
 };
 
 module.exports.updateProfile = async (req, res) => {
