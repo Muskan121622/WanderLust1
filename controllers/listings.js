@@ -535,6 +535,9 @@ module.exports.showListing = async (req, res, next) => {
           aiSummaryLastUpdated: new Date()
         });
 
+        // Update the listing object for immediate display
+        listing.aiSummary = aiSummary;
+
         console.log('✅ AI summary generated for:', listing.title);
       } catch (error) {
         console.error('AI summary generation failed:', error.message);
